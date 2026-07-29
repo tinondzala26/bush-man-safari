@@ -76,6 +76,7 @@ export default function Home() {
   const [previewColours, setPreviewColours] = useState<Record<number,string>>({});
   const [typeFilter, setTypeFilter] = useState("All");
   const [returnsOpen, setReturnsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const kindOf = (p:Product) => {
     const n=p.name.toLowerCase();
@@ -109,9 +110,10 @@ export default function Home() {
   };
 
   const visible = useMemo(() => {
-    const filtered = products.filter(p => (department === "All" || p.gender === department || p.gender === "Unisex") && (category === "All" || p.category === category) && (typeFilter === "All" || kindOf(p) === typeFilter) && (!saleOnly || ["Sun & Body","Accessories","Headwear"].includes(p.category)));
+    const query = searchTerm.trim().toLowerCase();
+    const filtered = products.filter(p => (department === "All" || p.gender === department || p.gender === "Unisex") && (category === "All" || p.category === category) && (typeFilter === "All" || kindOf(p) === typeFilter) && (!saleOnly || ["Sun & Body","Accessories","Headwear"].includes(p.category)) && (!query || `${p.name} ${p.category} ${p.gender} ${p.description}`.toLowerCase().includes(query)));
     return [...filtered].sort((a,b) => sort === "Price: Low to High" ? a.price-b.price : sort === "Price: High to Low" ? b.price-a.price : a.id-b.id);
-  }, [department, category, typeFilter, sort, saleOnly]);
+  }, [department, category, typeFilter, sort, saleOnly, searchTerm]);
 
   const money = (n:number) => `R${n.toLocaleString("en-ZA")}`;
   const colourHex = (product:Product, name:string) => product.colours.find(c=>c.name===name)?.hex || "transparent";
@@ -147,7 +149,7 @@ export default function Home() {
         <button onClick={()=>chooseCategory("Sun & Body")}>SUN & BODY</button>
       </nav>
       <div className="headerTools">
-        <label className="search"><span>⌕</span><input placeholder="Search safari essentials" aria-label="Search products" /></label>
+        <label className="search"><span>⌕</span><input value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} placeholder="Search safari essentials" aria-label="Search products" /></label>
         <button aria-label="Account">♙</button><button aria-label="Wishlist">♡</button>
         <button className="bagIcon" onClick={()=>setCartOpen(true)} aria-label={`Bag with ${cart.length} items`}>BAG <b>{cart.length}</b></button>
       </div>
@@ -170,13 +172,31 @@ export default function Home() {
       )}
     </section>
 
+    <section className="storeEdit">
+      <article className="editLead">
+        <img src="/real-apparel.jpg" alt="Bush Man safari apparel collection" />
+        <div><span>THE SAFARI EDIT</span><h2>Built for the wild.<br/>Refined for the city.</h2><p>Quiet utility, breathable fabrics and signature field colours designed to travel well beyond the trail.</p><button onClick={()=>chooseCategory("Shirts")}>SHOP READY-TO-WEAR</button></div>
+      </article>
+      <article className="editSide">
+        <img src="/real-field-kit.jpg" alt="Bush Man field essentials collection" />
+        <div><span>FIELD ESSENTIALS</span><h3>The considered kit</h3><p>Hard-working accessories, sun care and travel pieces for every departure.</p><button onClick={()=>chooseCategory("Accessories")}>DISCOVER THE EDIT</button></div>
+      </article>
+    </section>
+
+    <section className="merchNav" aria-label="Popular ways to shop">
+      <button onClick={()=>{setSaleOnly(false);setDepartment("All");setCategory("All");setTypeFilter("All");setSort("Featured");document.getElementById("products")?.scrollIntoView()}}><b>NEW ARRIVALS</b><span>Fresh field goods for 2026</span></button>
+      <button onClick={()=>chooseDepartment("Women")}><b>WOMEN’S COLLECTION</b><span>Safari tailoring with an easy fit</span></button>
+      <button onClick={()=>chooseDepartment("Men")}><b>MEN’S COLLECTION</b><span>Modern utility for work and travel</span></button>
+      <button onClick={()=>{setSaleOnly(true);setDepartment("All");setCategory("All");setTypeFilter("All");document.getElementById("products")?.scrollIntoView()}}><b>THE SALE EDIT</b><span>Selected pieces at exceptional value</span></button>
+    </section>
+
     <section className="catalogue" id="products">
       <div className="catalogueTop">
-        <div><p>BUSH MAN / {saleOnly ? "SALE" : department.toUpperCase()}</p><h2>{saleOnly ? "Sale: sun, accessories & headwear" : department === "All" ? "Shop all field goods" : `${department}'s safari clothing`}</h2></div>
+        <div><p>BUSH MAN / {saleOnly ? "SALE" : department.toUpperCase()}</p><h2>{searchTerm ? `Results for “${searchTerm}”` : saleOnly ? "Sale: sun, accessories & headwear" : department === "All" ? "Shop all field goods" : `${department}'s safari clothing`}</h2></div>
         <span>{visible.length} ITEMS</span>
       </div>
       <div className="shopControls">
-        <div className="filterChips">{(saleOnly ? categories.filter(c=>["All","Sun & Body","Accessories","Headwear"].includes(c)) : categories).map(c=><button key={c} className={category===c?"selected":""} onClick={()=>setCategory(c)}>{c}</button>)}</div>
+        <div className="filterChips">{(saleOnly ? categories.filter(c=>["All","Sun & Body","Accessories","Headwear"].includes(c)) : categories).map(c=><button key={c} className={category===c?"selected":""} onClick={()=>{setTypeFilter("All");setCategory(c)}}>{c}</button>)}</div>
         <label>SORT BY <select value={sort} onChange={e=>setSort(e.target.value)}><option>Featured</option><option>Price: Low to High</option><option>Price: High to Low</option></select></label>
       </div>
       {availableTypes.length>0&&<div className="typeFilters"><button className={typeFilter==="All"?"selected":""} onClick={()=>setTypeFilter("All")}>ALL {category.toUpperCase()}</button>{availableTypes.map(t=><button key={t} className={typeFilter===t?"selected":""} onClick={()=>setTypeFilter(t)}>{t.toUpperCase()}</button>)}</div>}
@@ -194,6 +214,23 @@ export default function Home() {
           </div>
         </article>})}
       </div>
+      {visible.length===0&&<div className="noResults"><h3>No field goods found</h3><p>Try another search or browse all collections.</p><button onClick={()=>{setSearchTerm("");setCategory("All");setTypeFilter("All");setDepartment("All")}}>VIEW ALL PRODUCTS</button></div>}
+    </section>
+
+    <section className="collectionStories">
+      <article><img src="/apparel-collection.png" alt="Bush Man apparel collection" /><div><span>01 / APPAREL</span><h2>The uniform of open country</h2><p>Layerable shirts, tailored bottoms and weather-ready outerwear in a disciplined natural palette.</p><button onClick={()=>chooseCategory("Shirts")}>EXPLORE APPAREL</button></div></article>
+      <article><img src="/essentials-collection.png" alt="Bush Man essentials collection" /><div><span>02 / FIELD CARE</span><h2>Made for days under African sun</h2><p>Practical protection and considered body care, made to earn a permanent place in your field bag.</p><button onClick={()=>chooseCategory("Sun & Body")}>SHOP FIELD CARE</button></div></article>
+    </section>
+
+    <section className="journal">
+      <div className="journalIntro"><span>FIELD NOTES</span><h2>Stories from beyond the pavement</h2><p>Dispatches on design, travel and the rituals that make time outdoors feel like home.</p><a href="#products">READ THE JOURNAL</a></div>
+      <article><img src="/real-leather-sandals.jpg" alt="Leather safari sandals" /><span>CRAFT</span><h3>Why honest materials travel better</h3><p>Inside our approach to leather, canvas and pieces that gain character with every journey.</p></article>
+      <article><img src="/real-sunscreen.jpg" alt="Bush Man sunscreen in the field" /><span>FIELD GUIDE</span><h3>Prepared for the African sun</h3><p>A practical guide to protection, hydration and packing light for long days outside.</p></article>
+    </section>
+
+    <section className="serviceConcierge">
+      <div><span>NEED HELP?</span><h2>Bush Man client care</h2><p>From fit advice to delivery questions, our team is here to help you choose well.</p><button>CONTACT CLIENT CARE</button></div>
+      <div className="serviceLinks"><a href="#"><b>DELIVERY</b><span>Complimentary over R1 500</span></a><button onClick={()=>setReturnsOpen(true)}><b>RETURNS</b><span>Easy returns within 30 days</span></button><a href="#"><b>SIZE & FIT</b><span>Find your ideal fieldwear fit</span></a><a href="#"><b>GIFTING</b><span>Thoughtful goods, ready to give</span></a></div>
     </section>
 
     <section className="trustRow"><button onClick={()=>setReturnsOpen(true)}>↻<b>30-DAY RETURNS</b><span>Read our clear returns promise</span></button><div>♧<b>MADE FOR AFRICA</b><span>Purposeful fabrics and finishes</span></div><div>⌂<b>DESIGNED IN CAPE TOWN</b><span>Modern South African fieldwear</span></div><div>✦<b>SECURE CHECKOUT</b><span>Safe and protected payment</span></div></section>
